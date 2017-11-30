@@ -10,6 +10,9 @@ namespace Excel
     {
         static void Main(string[] args)
         {
+            catchFalseInput(args);
+            Table.buildTable(args);
+            Writer.outputEvalTable(args[1]);
         }
     }
 }
