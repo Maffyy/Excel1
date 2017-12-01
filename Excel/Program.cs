@@ -7,43 +7,60 @@ using System.Threading.Tasks;
 
 namespace Excel
 {
+    public interface ICell { }
+    public interface ICell<T>
+    {
+        T value { get; set; }
+    }
+    struct CellValue : ICell
+    {
+        public int value { get; set; }
+    }
+    struct CellString : ICell
+    {
+
+    }
+
+    public class Cell
+    {
+        public string content { get; set; }
+        public int value { get; set; }
+        public Cell(int v)
+        {
+            value = v;
+        }
+        public Cell(string c)
+        {
+            content = c;
+        }
+    }
+
     class Reader
     {
 
         public static void storeTable(string input)
         {
+            char[] delimiters = new char[] { ' ', '\t', '\n', '\r' };
             StreamReader sr = new StreamReader(input);
-            char c = (char)sr.Peek();
-            StringBuilder token = new StringBuilder();
-            List<string> line = new List<string>();
-
-            while (sr.Peek() > -1)
+            List<Cell> line = new List<Cell>();
+            Cell c;
+            while(sr.Peek() >= 0)
             {
-                c = (char)sr.Read();
-
-                if (c.Equals(' ') || c.Equals('\t') || c.Equals('\n'))
+                string[] tokens = sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string token in tokens)
                 {
-                    if (!token.Equals(string.Empty))
+                    if (int.TryParse(token, out int num))
                     {
-                        line.Add(token.ToString());
+                        c = new Cell(num);
                     }
-                    token.Clear();
-
-                    if (c.Equals('\n'))
+                    else
                     {
-                        Table.input.Add(line);
-                        line = new List<string>();
+                        c = new Cell(token);
                     }
                 }
-                else
-                {
-                    token.Append(c);
-                }
-
-
             }
-            line.Add(token.ToString());
-            Table.input.Add(line);
+
+            
         }
     }
     class Program
