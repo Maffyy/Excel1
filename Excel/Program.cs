@@ -7,18 +7,20 @@ using System.Threading.Tasks;
 
 namespace Excel
 {
-    public interface ICell { }
-    public interface ICell<T>
+  
+    public interface ICell 
     {
-        T value { get; set; }
+        
     }
-    struct CellValue : ICell
+
+
+    public class CellValue : ICell
     {
         public int value { get; set; }
     }
-    struct CellString : ICell
+    public class CellString : ICell
     {
-
+        public string value { get; set; }
     }
 
     public class Cell
@@ -35,6 +37,35 @@ namespace Excel
         }
     }
 
+    class Solver
+    {
+    
+    }
+
+    class Table
+    {
+        public static List<List<Cell>> input = new List<List<Cell>>();
+
+        public static void evaluateTable()
+        {
+            for (int i = 0; i < input.Count; i++)
+            {
+                for (int j = 0; j < input[j].Count; j++)
+                {
+
+                }
+            }
+        }
+
+        public static void buildTable(string[] tables)
+        {
+            Reader.storeTable(tables[0]);
+            evaluateTable();
+        }
+    }
+
+
+
     class Reader
     {
 
@@ -44,6 +75,10 @@ namespace Excel
             StreamReader sr = new StreamReader(input);
             List<Cell> line = new List<Cell>();
             Cell c;
+            ICell c2 = new CellString();
+            
+
+
             while(sr.Peek() >= 0)
             {
                 string[] tokens = sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
@@ -57,10 +92,11 @@ namespace Excel
                     {
                         c = new Cell(token);
                     }
+                    line.Add(c);
                 }
+                Table.input.Add(line);
+                line.Clear();
             }
-
-            
         }
     }
     class Program
