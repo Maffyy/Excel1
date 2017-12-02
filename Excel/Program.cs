@@ -7,96 +7,124 @@ using System.Threading.Tasks;
 
 namespace Excel
 {
+    enum CellType { EMPTY, INTEGER, FORMULA, INVVAL };
+    enum Error { ERROR, DIV0, FORMULA, MISSOP, INVVAL, CYCLE };
+
+    interface ICell
+    {
+        CellType getSymbol();
+        int getX();
+        int getY();
+        void setX(int cor);
+        void setY(int cor);
+    }
   
-    public interface ICell 
+    abstract class Cell : ICell
     {
-        
+        int x, y;
+        abstract public CellType getSymbol();
+        public int getX()
+        {
+            return x;
+        }
+        public int getY()
+        {
+            return y;
+        }
+        public void setX(int cor)
+        {
+            x = cor;
+        }
+        public void setY(int cor)
+        {
+            y = cor;
+        }
     }
 
-
-    public class CellValue : ICell
+    class Integer : Cell
     {
-        public int value { get; set; }
-    }
-    public class CellString : ICell
-    {
-        public string value { get; set; }
-    }
-
-    public class Cell
-    {
-        public string content { get; set; }
-        public int value { get; set; }
-        public Cell(int v)
+        int value { get; set; }
+        public Integer(int v)
         {
             value = v;
         }
-        public Cell(string c)
+        public override CellType getSymbol()
         {
-            content = c;
+            return CellType.INTEGER;
         }
+        
     }
-
-    class Solver
+    class Formula : Cell
     {
-    
+        string formula;
+        public Formula(string f)
+        {
+            formula = f;
+        }
+        public override CellType getSymbol()
+        {
+            return CellType.FORMULA;
+        }
     }
-
-    class Table
+    class Empty : Cell
     {
-        public static List<List<Cell>> input = new List<List<Cell>>();
-
-        public static void evaluateTable()
+        public override CellType getSymbol()
         {
-            for (int i = 0; i < input.Count; i++)
-            {
-                for (int j = 0; j < input[j].Count; j++)
-                {
-
-                }
-            }
-        }
-
-        public static void buildTable(string[] tables)
-        {
-            Reader.storeTable(tables[0]);
-            evaluateTable();
+            return CellType.EMPTY;
         }
     }
-
-
-
+    class Invval : Cell
+    {
+        public override CellType getSymbol()
+        {
+            return CellType.INVVAL;
+        }
+    }
     class Reader
     {
-
+        public static ICell parse(string token)
+        {
+            ICell c;
+            if (int.TryParse(token,out int num))
+            {
+                c = new Integer(num);
+            }
+            else if (token == "[]")
+            {
+                c = new Empty();
+            }
+            else if (token[0] == '=')
+            {
+                c = new Formula(token);
+            }
+            else
+            {
+                c = new Invval();
+            }
+            return c;
+        }
         public static void storeTable(string input)
         {
             char[] delimiters = new char[] { ' ', '\t', '\n', '\r' };
             StreamReader sr = new StreamReader(input);
-            List<Cell> line = new List<Cell>();
-            Cell c;
-            ICell c2 = new CellString();
-            
-
-
+            List<ICell> line = new List<ICell>();
             while(sr.Peek() >= 0)
             {
                 string[] tokens = sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
                 foreach (string token in tokens)
                 {
-                    if (int.TryParse(token, out int num))
-                    {
-                        c = new Cell(num);
-                    }
-                    else
-                    {
-                        c = new Cell(token);
-                    }
+                    ICell c = parse(token);
                     line.Add(c);
                 }
-                Table.input.Add(line);
                 line.Clear();
             }
+        }
+    }
+    class Table
+    {
+        public static void buildTable()
+        {
+            
         }
     }
     class Program
