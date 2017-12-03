@@ -10,24 +10,32 @@ namespace Excel
     class Reader
     {
 
-        public static ICell parse(string token)
+        public static ICell parse(string token, int i, int j)
         {
             ICell c;
             if (int.TryParse(token, out int num))
             {
                 c = new Integer(num);
+                c.setX(i);
+                c.setY(j);
             }
             else if (token == "[]")
             {
                 c = new Empty();
+                c.setX(i);
+                c.setY(j);
             }
             else if (token[0] == '=')
             {
                 c = new Formula(token);
+                c.setX(i);
+                c.setY(j);
             }
             else
             {
                 c = new Invval(Error.INVVAL);
+                c.setX(i);
+                c.setY(j);
             }
             return c;
         }
@@ -39,16 +47,26 @@ namespace Excel
             char[] delimiters = new char[] { ' ', '\t', '\n', '\r' };
             StreamReader sr = new StreamReader(inputFile);
             List<ICell> line = new List<ICell>();
+            ICell c;
+           
+            int i = 0;
             while (sr.Peek() >= 0)
             {
-                string[] tokens = sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
+                int j = 0;
+                string[] tokens= sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
+               // Console.WriteLine();
                 foreach (string token in tokens)
                 {
-                    ICell c = parse(token);
+                    //Console.Write("{0} ",token);
+                    c = parse(token,i,j);
                     line.Add(c);
+                    j++;
                 }
+              //  Console.WriteLine(line.Count());
                 cur.Add(line);
-                line.Clear();
+                //  Console.WriteLine(cur.Count());
+                line = new List<ICell>();
+                i++;
             }
             return cur;
         }
@@ -76,7 +94,9 @@ namespace Excel
                     if (line[i].getSymbol() == CellType.EMPTY) { wr.Write("[]"); }
                     else if (line[i].getSymbol() == CellType.INTEGER)
                     {
+                        
                         Integer num = (Integer)line[i];
+                       // Console.WriteLine(true);
                         wr.Write(num.getValue());
                     }
                     else if (line[i].getSymbol() == CellType.INVVAL)
