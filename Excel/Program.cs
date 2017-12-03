@@ -97,65 +97,11 @@ namespace Excel
             return CellType.INVVAL;
         }
     }
-    class Reader
-    {
-        
-        public static ICell parse(string token)
-        {
-            ICell c;
-            if (int.TryParse(token,out int num))
-            {
-                c = new Integer(num);
-            }
-            else if (token == "[]")
-            {
-                c = new Empty();
-            }
-            else if (token[0] == '=')
-            {
-                c = new Formula(token);
-            }
-            else
-            {
-                c = new Invval(Error.INVVAL);
-            }
-            return c;
-        }
-        
-        
-        public static List<List<ICell>> storeTable(string inputFile)
-        {
-            List<List<ICell>> cur = new List<List<ICell>>();
-            char[] delimiters = new char[] { ' ', '\t', '\n', '\r' };
-            StreamReader sr = new StreamReader(inputFile);
-            List<ICell> line = new List<ICell>();
-            while (sr.Peek() >= 0)
-            {
-                string[] tokens = sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
-                foreach (string token in tokens)
-                {
-                    ICell c = parse(token);
-                    line.Add(c);
-                }
-                cur.Add(line);
-                line.Clear();
-            }
-            return cur;
-        }
-
-        public static void storeLists(string[] l)
-        {
-            for (int i = 2; i < l.Length; i++)
-            {
-                List<List<ICell>> input = storeTable(l[i]);
-                Table.lists.Add(input);
-            }
-        }
-    }
+    
     class Table
     {
         public static List<List<ICell>> input = new List<List<ICell>>();
-        public static List<List<List<ICell>>> lists = new List<List<List<ICell>>>();
+        public static Dictionary<string,List<List<ICell>>> lists = new Dictionary<string,List<List<ICell>>>();
         public static Stack<ICell> cellStack = new Stack<ICell>();
 
         public static void missingOp(char op, string operand1, string operand2, ICell c)
@@ -185,6 +131,8 @@ namespace Excel
         {
             Formula f = (Formula)c;
             string formula = f.getFormula();
+            int x = c.getX();
+            int y = c.getY();
             string operand1 = null;
             string operand2 = null;
             char op = '0';
@@ -205,12 +153,59 @@ namespace Excel
             if(!string.IsNullOrEmpty(temp.ToString())) { operand2 = temp.ToString(); }
             temp.Clear();
             missingOp(op, operand1, operand2, c);   // pokud chybi operator nebo operand
+            ICell op1 = Coordinates.getOperand(operand1);
+            ICell op2 = Coordinates.getOperand(operand2);
+            int opV1 = 0;
+            int opV2 = 0;
+            if (op1.getSymbol() == CellType.INVVAL || op2.getSymbol() == CellType.INVVAL )
+            {
+                input[x][y] = new Invval(Error.ERROR);
+                input[x][y].setX(x);
+                input[x][y].setY(y);
+                return;
+            }
+            if (op1.getSymbol() == CellType.EMPTY) { opV1 = 0; }
+            if (op2.getSymbol() == CellType.EMPTY) { opV2 = 0; }
+            if (op1.getSymbol() == CellType.INTEGER)
+            {
+                Integer num = (Integer)op1;
+                opV1 = num.getValue();
+            }
+            if (op2.getSymbol() == CellType.INTEGER)
+            {
+                Integer num = (Integer)op2;
+                opV2 = num.getValue();
+            }
+            if (opV2 == 0 && op == '/')
+            {
+                input[x][y] = new Invval(Error.DIV0);
+                input[x][y].setX(x);
+                input[x][y].setY(y);
+                return;
+            }
+            int result = 0;
+            switch (op)
+            {
+                case '+':
+                    result = opV1 + opV2;
+                    break;
+                case '-':
+                    result = opV1 - opV2;
+                    break;
+                case '/':
+                    result = opV1 / opV2;
+                    break;
+                case '*':
+                    result = opV1 * opV2;
+                    break;
+                default:
+                    break;
+            }
+            input[x][y] = new Integer(result);
+            input[x][y].setX(x);
+            input[x][y].setY(y);
 
-           
-
-       
         }
-
         public static void Evaluate(ICell c)
         {
             
@@ -238,6 +233,10 @@ namespace Excel
             }
         }
     }
+
+    /// <summary>
+    /// find coordinates of cell from operand
+    /// </summary>
     class Coordinates
     {
         public static string getExcelIndex(int num)
@@ -268,15 +267,30 @@ namespace Excel
 
             return sum;
         }
-
-        public static void getAddress(string adr, out string l, out int row, out int col)
+        public static bool findElem(int x, int y, List<List<ICell>> l)
         {
+            for (int i = 0; i < l.Count; i++)
+            {
+                for (int j = 0; j < l[i].Count; j++)
+                {
+                    if (x == i && y == j)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        public static ICell getOperand(string adr)
+        {
+
             StringBuilder temp = new StringBuilder();
-            l = null;
-            col = 0;
-            row = 0;
+            string l = null;
+            int col = 0;
+            int row = 0;
             int i = 0;
-            if (adr == null) { return; }
+            bool digit = false;
+            
             if (!adr.Contains('!'))
             {
                 while (char.IsLetter(adr[i]))
@@ -290,10 +304,13 @@ namespace Excel
                 {
                     temp.Append(adr[i]);
                     ++i;
+                    digit = true;
                 }
+                if (!digit) {  return null; }
                 row = int.Parse(temp.ToString()) - 1;
                 temp.Clear();
-                //a
+                if(!findElem(row,col,Table.input)) { return null; }
+                return Table.input[row][col];
             }
             else
             {
@@ -314,18 +331,22 @@ namespace Excel
                 {
                     temp.Append(adr[i]);
                     ++i;
+                    digit = true;
                 }
+                if (!digit) { return null; }
+                List<List<ICell>> otherList = Table.lists[l];
+                if (findElem(row,col,otherList))
                 row = int.Parse(temp.ToString());
                 temp.Clear();
+                return otherList[row][col];
+                
             }
+            
 
         }
     }
 
-    class Writer
-    {
-
-    }
+    
     class Program
     {
         public static void catchFalseInput(string[] input)
@@ -351,7 +372,7 @@ namespace Excel
                 Reader.storeLists(args);
                 }
                 Table.buildTable();
-               // Writer.outputEvalTable(args[1]);
+                Writer.outputEvalTable(args[1]);
             }
     }
 }
