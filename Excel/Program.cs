@@ -102,31 +102,53 @@ namespace Excel
     {
         public static List<List<ICell>> input;
         public static Dictionary<string,List<List<ICell>>> lists = new Dictionary<string,List<List<ICell>>>();
-      //  public static Stack<ICell> cellStack;
+        public static Stack<ICell> cellStack;
         public static ICell cycle;
+   
 
-       /* public static void markCycle(ICell cycle)
-        {
-            while (cellStack.Peek() == cycle)
+        public static void markCycle(ICell cycle)
+         {
+             while (cellStack.Peek() != cycle)
+             {
+                 //Console.WriteLine(true);
+                 ICell c = cellStack.Pop();
+                 int x = c.getX();
+                 int y = c.getY();
+                 input[x][y] = new Invval(Error.CYCLE);
+                 input[x][y].setX(x);
+                 input[x][y].setY(y);
+             }
+            if (cellStack.Peek() == cycle)
             {
-                ICell c = cellStack.Pop();
+                //Console.WriteLine(true);
+               // Console.WriteLine(((Formula)cycle).getFormula());
+                ICell c = cycle;
                 int x = c.getX();
                 int y = c.getY();
+
                 input[x][y] = new Invval(Error.CYCLE);
+                input[x][y].setX(x);
+                input[x][y].setY(y);
             }
-        }*/
+         }
+ 
+        public static bool cycleB = false;
         public static void solveFormula(ICell c)
         {
             Formula f = (Formula)c;
             string formula = f.getFormula().Substring(1);
             int x = c.getX();
             int y = c.getY();
-          //  Console.WriteLine(x);
-          //  Console.WriteLine(y);
+            cellStack.Push(c);          //uloz si vstupni bunku na zasobnik kvuli detekci cyklu
             string operand1 = null;
             string operand2 = null;
             char op = '0';
             StringBuilder temp = new StringBuilder();
+          
+
+            /*
+             Nacitam formuli
+             */
             for (int i = 0; i < formula.Length; i++)
             {
                 if (formula[i].Equals('+') || formula[i].Equals('/') || formula[i].Equals('*') || formula[i].Equals('-'))
@@ -142,7 +164,7 @@ namespace Excel
             }
             if(!string.IsNullOrEmpty(temp.ToString())) { operand2 = temp.ToString(); }
             temp.Clear();
-           
+           /* Pokud nemam operator, vyhodim chybu MissOp */
              if (op == '0')
              {
                     c = new Invval(Error.MISSOP);
@@ -151,14 +173,34 @@ namespace Excel
                     input[x][y] = c;
                     return;
              }
-           // Console.WriteLine(operand1);
-            
+            /*Nacteni operandu*/
+           ICell op1 = Coordinates.getOperand(operand1);
+           ICell op2 = Coordinates.getOperand(operand2);
+          
+            if (cellStack.Contains(op1))
+            {
+                cycle = op1;
+                Console.WriteLine(((Formula)cycle).getFormula());
+                cycleB = true;
+                markCycle(op1);
+               // c = new Invval(Error.CYCLE);
 
-            ICell op1 = Coordinates.getOperand(operand1);
-            ICell op2 = Coordinates.getOperand(operand2);
+                return;
+            }
+            if (cellStack.Contains(op2))
+            {
+                cycle = op2;
+               // c = new Invval(Error.CYCLE);
+                cycleB = true;
+                markCycle(op2);
+
+                return;
+            }
+            if (c.getSymbol() == CellType.INVVAL) { return; }
             
             int opV1 = 0;
             int opV2 = 0;
+            
             if (op1 == null || op2 == null)
             {
                 input[x][y] = new Invval(Error.FORMULA);
@@ -166,16 +208,6 @@ namespace Excel
                 input[x][y].setY(y);
                 return;
             }
-          /*  if (cellStack.Contains(op1))
-            {
-                Console.WriteLine(op1);
-                cycle = op1;
-                input[x][y] = new Invval(Error.CYCLE);
-                input[x][y].setX(x);
-                input[x][y].setY(y);
-                markCycle(cycle);
-                return;
-            }*/
             if (op1.getSymbol() == CellType.INVVAL || op2.getSymbol() == CellType.INVVAL)
             {
                 input[x][y] = new Invval(Error.ERROR);
@@ -197,14 +229,32 @@ namespace Excel
             }
             if (op1.getSymbol() == CellType.FORMULA)
             {
-               // cellStack.Push(c);
+              //  cellStack.Push(c);
                 solveFormula(op1);
+                //    if (c.getSymbol() == CellType.INVVAL) { return; }
+                
+
             }
             if (op2.getSymbol() == CellType.FORMULA)
             {
-                //cellStack.Push(c);
+               // cellStack.Push(c);
                 solveFormula(op2);
+                
+
+                //    if (c.getSymbol() == CellType.INVVAL) { return; }
             }
+
+            if (cycleB)
+            {
+                if (cycle == c)
+                {
+                    Console.WriteLine(((Formula)cycle).getFormula());
+                    cycleB = false;
+                }
+                return;
+            }
+
+          
             if (opV2 == 0 && op == '/')
             {
                 input[x][y] = new Invval(Error.DIV0);
@@ -233,7 +283,7 @@ namespace Excel
             input[x][y] = new Integer(result);
             input[x][y].setX(x);
             input[x][y].setY(y);
-
+            return;
         }
         
         public static void buildTable()
@@ -247,8 +297,7 @@ namespace Excel
                //     Console.WriteLine("b");
                    
                     if(input[i][j].getSymbol() == CellType.FORMULA) {
-                     //  cellStack = new Stack<ICell>();
-                       // cellStack.Push(input[i][j]);
+                       cellStack = new Stack<ICell>();
                         solveFormula(input[i][j]); }
                 }
             }

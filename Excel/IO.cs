@@ -107,6 +107,7 @@ namespace Excel
                         if (inv.getError() == Error.DIV0) { wr.Write("#DIV0"); }
                         if (inv.getError() == Error.FORMULA) { wr.Write("#FORMULA"); }
                         if (inv.getError() == Error.MISSOP) { wr.Write("#MISSOP"); }
+                        if (inv.getError() == Error.CYCLE) { wr.Write("#CYCLE"); }
                     }
                     if (i != line.Count - 1) { wr.Write(' '); }
                 }
