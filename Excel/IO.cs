@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Security;
 using System.Threading.Tasks;
 
 namespace Excel
@@ -54,17 +55,13 @@ namespace Excel
             {
                 int j = 0;
                 string[] tokens= sr.ReadLine().Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
-               // Console.WriteLine();
                 foreach (string token in tokens)
                 {
-                    //Console.Write("{0} ",token);
                     c = parse(token,i,j);
                     line.Add(c);
                     j++;
                 }
-              //  Console.WriteLine(line.Count());
                 cur.Add(line);
-                //  Console.WriteLine(cur.Count());
                 line = new List<ICell>();
                 i++;
             }
@@ -86,22 +83,24 @@ namespace Excel
     {
         public static void outputEvalTable(string output)
         {
+            
             StreamWriter wr = new StreamWriter(output);
-            foreach (List<ICell> line in Table.input)
+
+            for (int i = 0; i < Table.input.Count; i++)
             {
-                for (int i = 0; i < line.Count; i++)
+                for (int j = 0; j < Table.input[i].Count; j++)
                 {
-                    if (line[i].getSymbol() == CellType.EMPTY) { wr.Write("[]"); }
-                    else if (line[i].getSymbol() == CellType.INTEGER)
+                    if (Table.input[i][j].getSymbol() == CellType.EMPTY) { wr.Write("[]"); }
+                    else if (Table.input[i][j].getSymbol() == CellType.INTEGER)
                     {
                         
-                        Integer num = (Integer)line[i];
+                        Integer num = (Integer)Table.input[i][j];
                        // Console.WriteLine(true);
                         wr.Write(num.getValue());
                     }
-                    else if (line[i].getSymbol() == CellType.INVVAL)
+                    else if (Table.input[i][j].getSymbol() == CellType.INVVAL)
                     {
-                        Invval inv = (Invval)line[i];
+                        Invval inv = (Invval)Table.input[i][j];
                         if (inv.getError() == Error.INVVAL) { wr.Write("#INVVAL"); }
                         if (inv.getError() == Error.ERROR) { wr.Write("#ERROR"); }
                         if (inv.getError() == Error.DIV0) { wr.Write("#DIV0"); }
@@ -109,9 +108,9 @@ namespace Excel
                         if (inv.getError() == Error.MISSOP) { wr.Write("#MISSOP"); }
                         if (inv.getError() == Error.CYCLE) { wr.Write("#CYCLE"); }
                     }
-                    if (i != line.Count - 1) { wr.Write(' '); }
+                    if (j != Table.input[i].Count - 1) { wr.Write(' '); }
                 }
-                wr.Write("\n");
+                if (i != Table.input.Count - 1) { wr.Write('\n'); }
                 wr.Flush();
             }
             wr.Flush();

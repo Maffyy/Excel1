@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Excel
@@ -79,7 +80,11 @@ namespace Excel
                 if (!digit) { return null; }
                 row = int.Parse(temp.ToString()) - 1;
                 temp.Clear();
-                if (!findElem(row, col, Table.input)) { return null; }
+                if (!findElem(row, col, Table.input))
+                {
+                    ICell c = new Empty();
+                    return c;
+                }
                 return Table.input[row][col];
             }
             else
@@ -105,7 +110,16 @@ namespace Excel
                 }
                 if (!digit) { return null; }
                 List<List<ICell>> otherList = Table.lists[l];
-                if (findElem(row, col, otherList))
+                if(!Table.lists.ContainsKey(l))
+                {
+                    ICell c = new Invval(Error.ERROR);
+                    return c;
+                }
+                if (!findElem(row, col, otherList))
+                {
+                    ICell c = new Empty();
+                    return c;
+                }
                     row = int.Parse(temp.ToString());
                 temp.Clear();
                 return otherList[row][col];
